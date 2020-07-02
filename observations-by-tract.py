@@ -32,30 +32,44 @@ print (grouped.sort_values('count'))
 
 merged_areas = tracts_race.merge(grouped, on='name', how='outer')
 
-vmin, vmax = 100, 1000
-fig, ax = plt.subplots(1, figsize=(10, 12))
-ax.axis('off')
-ax.set_title('iNat Observations by Census Tract', fontdict={'fontsize': '25', 'fontweight' : '3'})
 
-# sm = plt.cm.ScalarMappable(cmap='Greens', norm=plt.Normalize(vmin=vmin, vmax=vmax))
-# sm._A = []
-# cbar = fig.colorbar(sm)
+def style_function_all(x):
+    return {
+        "weight":1,
+        'color':'black',
+        'fillColor':colormap(x['properties']['count']),
+        'fillOpacity':0.7
+    }
 
-# merged_areas.plot(column='count', cmap = 'Greens', legend =  True, linewidth=0.8, edgecolor='0.8', ax=ax, scheme="quantiles", k=30)
-# merged_areas.plot(column='count', cmap = 'Greens', legend =  True, linewidth=0.8, edgecolor='0.8', ax=ax, scheme="User_Defined", classification_kwds=dict(bins=[0,10,50,100,200,300,400,500,750,1000,1500,2000,3000,5000]))
+
+def style_function_maj_non_white(x):
+    return {
+        "weight":1,
+        'color':'black',
+        'fillColor':'#black' if x['properties']['B02001001'] == 0 or x['properties']['B02001002'] > x['properties']['B02001001'] * 0.5 else colormap(x['properties']['count']),
+        'fillOpacity':0.7
+    }
+
+
+def style_function_maj_white(x):
+    return {
+        "weight":1,
+        'color':'black',
+        'fillColor':'#black' if x['properties']['B02001001'] == 0 or x['properties']['B02001002'] < x['properties']['B02001001'] * 0.5 else colormap(x['properties']['count']),
+        'fillOpacity':0.7
+    }
+
+
+def style_function_maj_black(x):
+    return {
+        "weight":1,
+        'color':'black',
+        'fillColor':'#black' if x['properties']['B02001001'] == 0 or x['properties']['B02001003'] < x['properties']['B02001001'] * 0.5 else colormap(x['properties']['count']),
+        'fillOpacity':0.7
+    }
+
 
 m = folium.Map(location=[40, -75.1], zoom_start=11)
-# bins = list(merged_areas['count'].quantile([0,0.05,0.1,0.2,0.5,0.75,0.9,0.95,0.98,1]))
-# choropleth = folium.Choropleth(geo_data=merged_areas.to_json(),
-                  # data=merged_areas,
-                  # key_on='feature.properties.name',
-                  # columns=['name', 'count'],
-                  # fill_color='Greens',
-                  # bins=bins,
-                  # reset=True
-                 # ).add_to(m)
-
-# folium.GeoJsonPopup(fields=['name', 'count', 'B02001001']).add_to(choropleth.geojson)
 
 colormap = folium.LinearColormap(
     colors=["darkred", "red", "orange","yellow","lightgreen", "green", "darkgreen"],
@@ -63,17 +77,80 @@ colormap = folium.LinearColormap(
     vmin=merged_areas.loc[merged_areas['count']>0, 'count'].min(),
     vmax=merged_areas.loc[merged_areas['count']>0, 'count'].max())
 
-folium.GeoJson(merged_areas.to_json(),
-               name="Philadelphia",
-               style_function=lambda x: {"weight":1, 'color':'black','fillColor':colormap(x['properties']['count']), 'fillOpacity':0.7},
-               highlight_function=lambda x: {'weight':2, 'color':'black'},
-               tooltip=folium.GeoJsonTooltip(
-        fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
-        aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
-        sticky=True,
-        style="font-family: courier new; color: steelblue;",
-        opacity=0.8,
-        direction='top'),
-              ).add_to(m)
+tooltip_all = folium.GeoJsonTooltip(
+    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
+    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    sticky=True,
+    style="font-family: courier new; color: steelblue;",
+    opacity=0.8,
+    direction='top'
+)
 
-m.save('census_observations.html')
+tooltip_maj_non_white = folium.GeoJsonTooltip(
+    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
+    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    sticky=True,
+    style="font-family: courier new; color: steelblue;",
+    opacity=0.8,
+    direction='top'
+)
+
+tooltip_maj_white = folium.GeoJsonTooltip(
+    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
+    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    sticky=True,
+    style="font-family: courier new; color: steelblue;",
+    opacity=0.8,
+    direction='top'
+)
+
+tooltip_maj_black = folium.GeoJsonTooltip(
+    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
+    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    sticky=True,
+    style="font-family: courier new; color: steelblue;",
+    opacity=0.8,
+    direction='top'
+)
+
+feature_group_all = folium.FeatureGroup(name='All')
+feature_group_maj_non_white = folium.FeatureGroup(name='Majority Non-white', show=False)
+feature_group_maj_white = folium.FeatureGroup(name='Majority White', show=False)
+feature_group_maj_black = folium.FeatureGroup(name='Majority Black', show=False)
+
+folium.GeoJson(merged_areas.to_json(),
+               name="All",
+               style_function=style_function_all,
+               highlight_function=lambda x: {'weight':2, 'color':'black'},
+               tooltip=tooltip_all,
+               ).add_to(feature_group_all)
+
+folium.GeoJson(merged_areas.to_json(),
+               name="Majority Non-white",
+               style_function=style_function_maj_non_white,
+               highlight_function=lambda x: {'weight':2, 'color':'black'},
+               tooltip=tooltip_maj_non_white,
+               ).add_to(feature_group_maj_non_white)
+
+folium.GeoJson(merged_areas.to_json(),
+               name="Majority White",
+               style_function=style_function_maj_white,
+               highlight_function=lambda x: {'weight':2, 'color':'black'},
+               tooltip=tooltip_maj_white,
+               ).add_to(feature_group_maj_white)
+
+folium.GeoJson(merged_areas.to_json(),
+               name="Majority Black",
+               style_function=style_function_maj_black,
+               highlight_function=lambda x: {'weight':2, 'color':'black'},
+               tooltip=tooltip_maj_black,
+               ).add_to(feature_group_maj_black)
+
+feature_group_all.add_to(m)
+feature_group_maj_non_white.add_to(m)
+feature_group_maj_white.add_to(m)
+feature_group_maj_black.add_to(m)
+
+folium.LayerControl().add_to(m)
+
+m.save('maps/census_observations.html')
