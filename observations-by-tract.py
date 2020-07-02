@@ -33,6 +33,23 @@ print (grouped.sort_values('count'))
 merged_areas = tracts_race.merge(grouped, on='name', how='outer')
 
 
+def get_race_pct(col):
+    return merged_areas.B02001001.where(
+        merged_areas.B02001001 == 0,
+        round((merged_areas[col] / merged_areas.B02001001 * 100), 2)
+    )
+
+merged_areas['non_white_pct'] = merged_areas.B02001001.where(
+    merged_areas.B02001001 == 0,
+    round(100 - (merged_areas.B02001002 / merged_areas.B02001001 * 100), 2)
+)
+merged_areas['white_pct'] = get_race_pct('B02001002')
+merged_areas['black_pct'] = get_race_pct('B02001003')
+merged_areas['native_pct'] = get_race_pct('B02001004')
+merged_areas['asian_pct'] = get_race_pct('B02001005')
+merged_areas['islander_pct'] = get_race_pct('B02001006')
+
+
 def style_function_all(x):
     return {
         "weight":1,
@@ -77,9 +94,12 @@ colormap = folium.LinearColormap(
     vmin=merged_areas.loc[merged_areas['count']>0, 'count'].min(),
     vmax=merged_areas.loc[merged_areas['count']>0, 'count'].max())
 
+fields = ['name', 'count', 'B02001001', 'non_white_pct', 'white_pct', 'black_pct', 'native_pct', 'asian_pct', 'islander_pct']
+aliases = ['Tract Name','Observations Count', 'Total Population', 'Non-White %', 'White %', 'Black or African American %', 'American Indian and Alaska Native %', 'Asian %', 'Native Hawaiian and Other Pacific Islander %']
+
 tooltip_all = folium.GeoJsonTooltip(
-    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
-    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    fields=fields,
+    aliases=aliases,
     sticky=True,
     style="font-family: courier new; color: steelblue;",
     opacity=0.8,
@@ -87,8 +107,8 @@ tooltip_all = folium.GeoJsonTooltip(
 )
 
 tooltip_maj_non_white = folium.GeoJsonTooltip(
-    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
-    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    fields=fields,
+    aliases=aliases,
     sticky=True,
     style="font-family: courier new; color: steelblue;",
     opacity=0.8,
@@ -96,8 +116,8 @@ tooltip_maj_non_white = folium.GeoJsonTooltip(
 )
 
 tooltip_maj_white = folium.GeoJsonTooltip(
-    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
-    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    fields=fields,
+    aliases=aliases,
     sticky=True,
     style="font-family: courier new; color: steelblue;",
     opacity=0.8,
@@ -105,8 +125,8 @@ tooltip_maj_white = folium.GeoJsonTooltip(
 )
 
 tooltip_maj_black = folium.GeoJsonTooltip(
-    fields=['name',"count", 'B02001001', 'B02001002', 'B02001003'],
-    aliases=['Tract Name','Observations Count', 'Total Population', 'White Only', 'Black Only'],
+    fields=fields,
+    aliases=aliases,
     sticky=True,
     style="font-family: courier new; color: steelblue;",
     opacity=0.8,
